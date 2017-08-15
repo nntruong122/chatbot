@@ -1,7 +1,7 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const request = require('request')
-const app = express()
+var express = require('express')
+var bodyParser = require('body-parser')
+var request = require('request')
+var app = express()
 
 app.set('port', (process.env.PORT || 5000))
 
@@ -11,34 +11,56 @@ app.use(bodyParser.urlencoded({extended: false}))
 // Process application/json
 app.use(bodyParser.json())
 
-// Index route
-app.get('/', function (req, res) {
-    res.send('Hello world, I am a chat bot')
-})
-
-
-
-var token = process.env.FB_ACCESS_TOKEN;
-var token_verifi = process.env.FB_VERYFI_TOKEN;
-// for Facebook verification
-app.get('/webhook/', function (req, res) {
-    if (req.query['hub.verify_token'] === token_verifi) {
-        //res.send(req.query['hub.challenge'])
-
-        res.send('Hello world, I am a chat bot')
-
-
-    }
-    res.send('Error, wrong token')
-})
-
+　
 // Spin up the server
 app.listen(app.get('port'), function() {
     console.log('running on port', app.get('port'))
 })
 
+　
+　
+// Index route
+app.get('/', function (req, res) {
+    res.send('Hello world, I am a chat bot :)')
+})
 
+　
+　
+var token = process.env.FB_ACCESS_TOKEN;
+var token_verifi = process.env.FB_VERYFI_TOKEN;
 
+　
+//sends message to User on FBMessenger
+function sendMessageToFBMessenger(recipientId, message) {
+  request({
+    url: "https://graph.facebook.com/v2.6/me/messages",
+    qs: {access_token: process.env.FB_ACCESS_TOKEN},
+    method: "POST",
+    json: {
+      recipient: {id: recipientId},
+      message: message,
+    }
+  },  function(error, response, body) {
+      if (error) {
+          console.log('Error sending messages: ', error)
+      } else if (response.body.error) {
+          console.log('Error: ', response.body.error)
+      }
+  });
+}
+// for Facebook verification
+app.get('/webhook/', function (req, res) {
+    if (req.query['hub.verify_token'] === token_verifi) {
+       
+       var js = JSON.stringify(req.body);
+       res.send('Hello world, I am a chat bot')
+       res.send (js);
+
+    }
+    res.send('Error, wrong token')
+})
+
+　
 /*v2*/
 // All callbacks for Messenger will be POST-ed here
 app.post("/webhook", function (req, res) {
@@ -55,7 +77,7 @@ app.post("/webhook", function (req, res) {
        else if (event.message) {
           processMessage(event);
 
-
+　
         }
       });
     });
@@ -64,13 +86,13 @@ app.post("/webhook", function (req, res) {
   }
 });
 
-
-
+　
+　
 // function to echo back messages 
 function processPostback(event) {
   var senderId = event.sender.id;
   var payload = event.postback.payload;
-
+  
   if (payload === "Greeting") {
     // Get user's first name from the User Profile API
     // and include it in the greeting
@@ -89,43 +111,22 @@ function processPostback(event) {
         var bodyObj = JSON.parse(body);
         name = bodyObj.first_name;
         greeting = "Hi " + name + ". ";
+
       }
       var message = greeting + "My name is Chat Bot. What movie would you like to know about?";
-      sendMessage(senderId, {text: message});
-
+      //sendMessageToFBMessenger(senderId, {text: message});
+      /*set send mesage postback event*/
+      sendPostBackWellcome (senderId, body);
       
     });
-  } else if (payload === "Correct") {
-    sendMessage(senderId, {text: "Awesome! What would you like to find out? Enter 'plot', 'date', 'runtime', 'director', 'cast' or 'rating' for the various details."});
-  } else if (payload === "Incorrect") {
-    sendMessage(senderId, {text: "Oops! Sorry about that. Try using the exact title of the movie"});
-  } else if (payload =="Chatbots are fun! One day your BFF might be a Chatbot"){
-    sendMessage(senderId, {text: "Chatbots are fun! One day your BFF might be a Chatbot"});
-  }else {
-        sendMessage(senderId, {text: "Sorry, I don't understand your request."});
-    }
+  } else {
+	  // call funciotn process pageload
+	  processPageload(pageload);
+  }
 
 }
 
-// sends message to user
-function sendMessage(recipientId, message) {
-  request({
-    url: "https://graph.facebook.com/v2.6/me/messages",
-    qs: {access_token: process.env.FB_ACCESS_TOKEN},
-    method: "POST",
-    json: {
-      recipient: {id: recipientId},
-      message: message,
-    }
-  }, function(error, response, body) {
-    if (error) {
-      console.log("Error sending message: " + response.error);
-    }
-  });
-}
-
-
-
+//function to echo message (text )
 function processMessage(event) {
   if (!event.message.is_echo) {
     var message = event.message;
@@ -161,17 +162,17 @@ function processMessage(event) {
             break;
 
           default:
-             sendMessage(senderId, {text: message.text});
+             sendMessageToFBMessenger(senderId, {text: message.text});
         }
       
     } else if (message.attachments) {
-      sendMessage(senderId, {text: "Sorry, I don't understand your request."});
+      sendMessageToFBMessenger(senderId, {text: "Sorry, I don't understand your request."});
     }
   }
 }
 
-
-
+　
+　
 function sendGenericMessage(sender) {
     messageData = {
         "attachment": {
@@ -233,6 +234,7 @@ function sendGenericMessage(sender) {
             } 
         }
     }
+    /*
     request({
         url: 'https://graph.facebook.com/v2.6/me/messages',
         qs: {access_token:token},
@@ -247,5 +249,75 @@ function sendGenericMessage(sender) {
         } else if (response.body.error) {
             console.log('Error: ', response.body.error)
         }
-    })
+    })*/
+    
+    sendMessageToFBMessenger(sender, messageData);
+}
+
+　
+// process wellcom 
+function sendPostBackWellcome (senderId, body){
+	
+  try{
+
+      var bodyObj = JSON.parse(body);
+  var name = bodyObj.first_name;
+  var greeting = "Xin chào bạn " + name + ". ";
+        
+  var messageHello = greeting + "Mình là chat bot. Rất hân hạnh được hỗ trợ bạn. Bạn có cần hỗ trợ về thông tin gì không?";
+  var  messageData = {
+     "attachment": 
+       {
+        "type": "template",
+        "payload": 
+          {
+            "template_type": "generic",
+            "image_url": "http://www.brandknewmag.com/wp-cont...",
+            "text": messageHello,
+                "buttons": [
+                  {
+                    "type": "postback",
+                    "title": "Có",
+                    "payload": "get_options_wellcome"
+                  },
+                  {
+                    "type": "postback",
+                    "title": "Không",
+                    "payload": "no_options_wellcome"
+                  }
+                ]
+          }
+        } 
+
+      }
+  
+  	// send message 
+  	sendMessageToFBMessenger(sender, messageData);
+  } catch (err)  {
+      console.error(err);
+  }
+  
+}
+
+　
+　
+// function process PageLoad 
+
+　
+function processPageload (pageload){
+	switch (pageload) {
+    case "Correct":
+    	sendMessageToFBMessenger(senderId, {text: "Awesome! What would you like to find out? Enter 'plot', 'date', 'runtime', 'director', 'cast' or 'rating' for the various details."});
+    	break;
+    case "Chatbots are fun! One day your BFF might be a Chatbot":
+    	sendMessageToFBMessenger(senderId, {text: "Chatbots are fun! One day your BFF might be a Chatbot."});
+    	break;
+    case "Machine Learning":
+    	sendMessageToFBMessenger(senderId, {text: "Use python to teach your maching in 16D space in 15min."});
+    	break;
+    default:
+    	// To do
+    	sendMessageToFBMessenger(senderId, {text: "Sorry, I don't understand your request."});
+        break;
+	}
 }
