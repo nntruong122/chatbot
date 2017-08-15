@@ -30,6 +30,58 @@ var token = process.env.FB_ACCESS_TOKEN;
 var token_verifi = process.env.FB_VERYFI_TOKEN;
 
 　
+// for Facebook verification
+app.get('/webhook/', function (req, res) {
+    if (req.query['hub.verify_token'] === token_verifi) {
+       
+       var js = JSON.stringify(req.body);
+       res.send('Hello world, I am a chat bot')
+       res.send (js);
+
+    }
+    res.send('Error, wrong token')
+})
+
+　
+
+
+
+/*v2*/
+// All callbacks for Messenger will be POST-ed here
+app.post("/webhook", function (req, res) {
+  // Make sure this is a page subscription
+  if (req.body.object == "page") {
+    // Iterate over each entry
+    // There may be multiple entries if batched
+    req.body.entry.forEach(function(entry) {
+      // Iterate over each messaging event
+      entry.messaging.forEach(function(event) {
+        if (event.postback) {
+          processPostback(event);
+        }
+       else if (event.message) {
+          processMessage(event);
+
+
+        }
+      });
+    });
+
+    res.sendStatus(200);
+  }
+},  function(error, response, body) {
+      if (error) {
+          console.log('Error sending messages: ', error)
+      } else if (response.body.error) {
+          console.log('Error: ', response.body.error)
+      }
+  }
+);
+
+　
+
+
+
 //sends message to User on FBMessenger
 function sendMessageToFBMessenger(recipientId, message) {
   request({
@@ -48,51 +100,14 @@ function sendMessageToFBMessenger(recipientId, message) {
       }
   });
 }
-// for Facebook verification
-app.get('/webhook/', function (req, res) {
-    if (req.query['hub.verify_token'] === token_verifi) {
-       
-       var js = JSON.stringify(req.body);
-       res.send('Hello world, I am a chat bot')
-       res.send (js);
-
-    }
-    res.send('Error, wrong token')
-})
-
-　
-/*v2*/
-// All callbacks for Messenger will be POST-ed here
-app.post("/webhook", function (req, res) {
-  // Make sure this is a page subscription
-  if (req.body.object == "page") {
-    // Iterate over each entry
-    // There may be multiple entries if batched
-    req.body.entry.forEach(function(entry) {
-      // Iterate over each messaging event
-      entry.messaging.forEach(function(event) {
-        if (event.postback) {
-          processPostback(event);
-        }
-       else if (event.message) {
-          processMessage(event);
-
-　
-        }
-      });
-    });
-
-    res.sendStatus(200);
-  }
-});
-
-　
 　
 // function to echo back messages 
 function processPostback(event) {
   var senderId = event.sender.id;
   var payload = event.postback.payload;
   
+  console.log('call postback: ', "processPostback");
+
   if (payload === "Greeting") {
     // Get user's first name from the User Profile API
     // and include it in the greeting
@@ -120,8 +135,8 @@ function processPostback(event) {
       
     });
   } else {
-	  // call funciotn process pageload
-	  processPageload(pageload);
+      // call funciotn process pageload
+      processPageload(senderId,payload);
   }
 
 }
@@ -257,44 +272,28 @@ function sendGenericMessage(sender) {
 　
 // process wellcom 
 function sendPostBackWellcome (senderId, body){
-	
+    
   try{
 
+ console.log('call sendPostBackWellcome: ', "sendPostBackWellcome");
       var bodyObj = JSON.parse(body);
   var name = bodyObj.first_name;
   var greeting = "Xin chào bạn " + name + ". ";
         
   var messageHello = greeting + "Mình là chat bot. Rất hân hạnh được hỗ trợ bạn. Bạn có cần hỗ trợ về thông tin gì không?";
   var  messageData = {
-     "attachment": 
-       {
-        "type": "template",
-        "payload": 
-          {
-            "template_type": "generic",
-            "image_url": "http://www.brandknewmag.com/wp-cont...",
-            "text": messageHello,
-                "buttons": [
-                  {
-                    "type": "postback",
-                    "title": "Có",
-                    "payload": "get_options_wellcome"
-                  },
-                  {
-                    "type": "postback",
-                    "title": "Không",
-                    "payload": "no_options_wellcome"
-                  }
-                ]
+         "attachment":{
+          "type":"image",
+          "payload":{
+            "url":"http://pngimg.com/uploads/hello/hello_PNG45.png"
           }
-        } 
-
+        }
       }
   
-  	// send message 
-  	sendMessageToFBMessenger(sender, messageData);
+    // send message 
+    sendMessageToFBMessenger(senderId, messageData);
   } catch (err)  {
-      console.error(err);
+      console.log('error sendPostBackWellcome: ',err);
   }
   
 }
@@ -304,20 +303,21 @@ function sendPostBackWellcome (senderId, body){
 // function process PageLoad 
 
 　
-function processPageload (pageload){
-	switch (pageload) {
+function processPageload (senderId,pageload){
+
+    switch (pageload) {
     case "Correct":
-    	sendMessageToFBMessenger(senderId, {text: "Awesome! What would you like to find out? Enter 'plot', 'date', 'runtime', 'director', 'cast' or 'rating' for the various details."});
-    	break;
-    case "Chatbots are fun! One day your BFF might be a Chatbot":
-    	sendMessageToFBMessenger(senderId, {text: "Chatbots are fun! One day your BFF might be a Chatbot."});
-    	break;
-    case "Machine Learning":
-    	sendMessageToFBMessenger(senderId, {text: "Use python to teach your maching in 16D space in 15min."});
-    	break;
-    default:
-    	// To do
-    	sendMessageToFBMessenger(senderId, {text: "Sorry, I don't understand your request."});
+        sendMessageToFBMessenger(senderId, {text: "Awesome! What would you like to find out? Enter 'plot', 'date', 'runtime', 'director', 'cast' or 'rating' for the various details."});
         break;
-	}
+    case "Chatbots are fun! One day your BFF might be a Chatbot":
+        sendMessageToFBMessenger(senderId, {text: "Chatbots are fun! One day your BFF might be a Chatbot."});
+        break;
+    case "Machine Learning":
+        sendMessageToFBMessenger(senderId, {text: "Use python to teach your maching in 16D space in 15min."});
+        break;
+    default:
+        // To do
+        sendMessageToFBMessenger(senderId, {text: "Sorry, I don't understand your request."});
+        break;
+    }
 }
