@@ -88,32 +88,32 @@ function sendMessageToFBMessenger(recipientId, message) {
 }
 //function get firstname and last name 
 function getFullNameCUS(senderid){
-	var fullname = "";
-	try{
-		
-		request({
-		      url: "https://graph.facebook.com/v2.6/" + senderId,
-		      qs: {
-		        access_token: token,
-		        fields: ["first_name", "last_name"]
-		      },
-		      method: "GET"
-		    }, function(error, response, body) {
-		      
-		      if (error) {
-		        console.log("Error getting user's name: " +  error);
-		      } else {
-		        var bodyObj = JSON.parse(body);
-		        name = bodyObj.first_name;
-		        fullname =  JSON.stringify(bodyObj); 
+    var fullname = "";
+    try{
+        
+        request({
+              url: "https://graph.facebook.com/v2.6/" + senderId,
+              qs: {
+                access_token: token,
+                fields: "first_name,last_name"
+              },
+              method: "GET"
+            }, function(error, response, body) {
+              
+              if (error) {
+                console.log("Error getting user's name: " +  error);
+              } else {
+                var bodyObj = JSON.parse(body);
+                name = bodyObj.first_name;
+                fullname =  JSON.stringify(bodyObj); 
 
-		      }});
-		console.log ("jsbody", fullname);
-	} catch( err){
-		console.log("error call getFullNameCUS ",err );
-	}
-	
-	return callback(fullname);
+              }});
+        console.log ("jsbody", fullname);
+    } catch( err){
+        console.log("error call getFullNameCUS ",err );
+    }
+    
+    return callback(fullname);
 }
 
 // function to echo back messages 
@@ -130,7 +130,7 @@ function processPostback(event) {
       url: "https://graph.facebook.com/v2.6/" + senderId,
       qs: {
         access_token: token,
-        fields: "first_name"
+        fields: "first_name,last_name"
       },
       method: "GET"
     }, function(error, response, body) {
@@ -290,7 +290,7 @@ function sendPostBackWellcome (senderId, body){
  console.log('call sendPostBackWellcome: ', "sendPostBackWellcome");
       var bodyObj = JSON.parse(body);
   var name = bodyObj.first_name;
-  var greeting = "Xin chào bạn " + name + ". ";
+  var greeting = "Xin chào bạn " + name +" "+bodyObj.last_name  + ". ";
         
   var messageHello = greeting + " :) Mình là SupportBot. Rất hân hạnh được hỗ trợ bạn. Bạn có cần hỗ trợ về thông tin gì không?";
   var  messageData = {
@@ -304,34 +304,34 @@ function sendPostBackWellcome (senderId, body){
   
     // send image hello 
     sendMessageToFBMessenger(senderId, messageData);
-  	// send welcome text 
-  	//sendMessageToFBMessenger(senderId,{text:messageHello});
-  	//send button 
-  	var messageButton  = {
-  			"attachment":{
-  	          "type":"template",
-  	          "payload":{
-  	            "template_type":"button",
-  	            "text":messageHello,
-  	            "buttons":[{
-  	            			"type":"postback",
-  	            			"title":"Có",
-  	            			"payload":"yes_support_welcome"
-  	            		},
-  	            		{
-  	            			"type":"postback",
-  	            			"title":"Không",
-  	            			"payload":"no_support_welcome"
-  	            		}
-  	            	]
-  	            }
-  	        }
+    // send welcome text 
+    //sendMessageToFBMessenger(senderId,{text:messageHello});
+    //send button 
+    var messageButton  = {
+            "attachment":{
+              "type":"template",
+              "payload":{
+                "template_type":"button",
+                "text":messageHello,
+                "buttons":[{
+                            "type":"postback",
+                            "title":"Có",
+                            "payload":"yes_support_welcome"
+                        },
+                        {
+                            "type":"postback",
+                            "title":"Không",
+                            "payload":"no_support_welcome"
+                        }
+                    ]
+                }
+            }
 
-  	};
-  	
-  	sendMessageToFBMessenger(senderId, messageButton);
-  	
-  	
+    };
+    
+    sendMessageToFBMessenger(senderId, messageButton);
+    
+    
   } catch (err)  {
       console.log('error sendPostBackWellcome: ',err);
   }
@@ -343,46 +343,46 @@ function processPayload (senderId,payload){
 
     try 
     {
-    	try {
-    		getFullNameCUS(senderId);
-    	}
-    	catch(err){
-    		
-    	}
-    	switch (payload) {
+        try {
+            getFullNameCUS(senderId);
+        }
+        catch(err){
+            
+        }
+        switch (payload) {
         case "yes_support_welcome":
 
-        	//show log
-        	console.log("start processPayload action:", "yes_support_welcome" );
-        	var messageText = "SupportBot có thể giúp bạn các vấn đề nào sao đây?"
-        	var messageData= {
-        		"attachment":{
-        			"type":"template",
-        			"payload":{
-        				"template_type":"button",
-        				"text":messageText,
-        				"buttons":[
-        				        {
-									"type":"postback",
-									"title":"Hợp đồng và phí",
-									"payload":"op_policy"
-								},
-								{
-									"type":"postback",
-									"title":"Mua thêm hợp đồng",
-									"payload":"by_op"
-								}
-        				]
-        			}
-        		}	
-        	};
-        	
-        	sendMessageToFBMessenger(senderId, messageData);
+            //show log
+            console.log("start processPayload action:", "yes_support_welcome" );
+            var messageText = "SupportBot có thể giúp bạn các vấn đề nào sao đây?"
+            var messageData= {
+                "attachment":{
+                    "type":"template",
+                    "payload":{
+                        "template_type":"button",
+                        "text":messageText,
+                        "buttons":[
+                                {
+                                    "type":"postback",
+                                    "title":"Hợp đồng và phí",
+                                    "payload":"op_policy"
+                                },
+                                {
+                                    "type":"postback",
+                                    "title":"Mua thêm hợp đồng",
+                                    "payload":"by_op"
+                                }
+                        ]
+                    }
+                }   
+            };
+            
+            sendMessageToFBMessenger(senderId, messageData);
             break;
         case "no_support_welcome":
-        	//show log
-        	console.log("start processPayload action:", "no_support_welcome" );
-        	
+            //show log
+            console.log("start processPayload action:", "no_support_welcome" );
+            
             break;
         default:
             // To do
@@ -390,8 +390,27 @@ function processPayload (senderId,payload){
             break;
         }
     } catch (err){
-    	//show error
-    	console.log("error processPayload", erro);
+        //show error
+        console.log("error processPayload", erro);
     }
-	
+    
 }
+
+
+/*
+ "message":{
+    "text":"Pick a color:",
+    "quick_replies":[
+      {
+        "content_type":"text",
+        "title":"Red",
+        "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_RED"
+      },
+      {
+        "content_type":"text",
+        "title":"Green",
+        "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_GREEN"
+      }
+    ]
+  }
+*/
