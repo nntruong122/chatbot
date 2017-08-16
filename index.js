@@ -11,25 +11,19 @@ app.use(bodyParser.urlencoded({extended: false}))
 // Process application/json
 app.use(bodyParser.json())
 
-　
 // Spin up the server
 app.listen(app.get('port'), function() {
     console.log('running on port', app.get('port'))
 })
 
-　
-　
 // Index route
 app.get('/', function (req, res) {
     res.send('Hello world, I am a chat bot :)')
 })
 
-　
-　
 var token = process.env.FB_ACCESS_TOKEN;
 var token_verifi = process.env.FB_VERYFI_TOKEN;
 
-　
 // for Facebook verification
 app.get('/webhook/', function (req, res) {
     if (req.query['hub.verify_token'] === token_verifi) {
@@ -41,10 +35,6 @@ app.get('/webhook/', function (req, res) {
     }
     res.send('Error, wrong token')
 })
-
-　
-
-
 
 /*v2*/
 // All callbacks for Messenger will be POST-ed here
@@ -62,7 +52,7 @@ app.post("/webhook", function (req, res) {
        else if (event.message) {
           processMessage(event);
 
-
+　
         }
       });
     });
@@ -77,10 +67,6 @@ app.post("/webhook", function (req, res) {
       }
   }
 );
-
-　
-
-
 
 //sends message to User on FBMessenger
 function sendMessageToFBMessenger(recipientId, message) {
@@ -100,7 +86,36 @@ function sendMessageToFBMessenger(recipientId, message) {
       }
   });
 }
-　
+//function get firstname and last name 
+function getFullNameCUS(senderid){
+	var fullname = "";
+	try{
+		
+		request({
+		      url: "https://graph.facebook.com/v2.6/" + senderId,
+		      qs: {
+		        access_token: token,
+		        fields: ["first_name", "last_name"]
+		      },
+		      method: "GET"
+		    }, function(error, response, body) {
+		      
+		      if (error) {
+		        console.log("Error getting user's name: " +  error);
+		      } else {
+		        var bodyObj = JSON.parse(body);
+		        name = bodyObj.first_name;
+		        fullname =  JSON.stringify(bodyObj); 
+
+		      }});
+		console.log ("jsbody", fullname);
+	} catch( err){
+		console.log("error call getFullNameCUS ",err );
+	}
+	
+	return callback(fullname);
+}
+
 // function to echo back messages 
 function processPostback(event) {
   var senderId = event.sender.id;
@@ -136,11 +151,12 @@ function processPostback(event) {
     });
   } else {
       // call funciotn process pageload
-      processPageload(senderId,payload);
+      processPayload(senderId,payload);
   }
 
 }
 
+　
 //function to echo message (text )
 function processMessage(event) {
   if (!event.message.is_echo) {
@@ -185,9 +201,6 @@ function processMessage(event) {
     }
   }
 }
-
-　
-　
 function sendGenericMessage(sender) {
     messageData = {
         "attachment": {
@@ -269,7 +282,6 @@ function sendGenericMessage(sender) {
     sendMessageToFBMessenger(sender, messageData);
 }
 
-　
 // process wellcom 
 function sendPostBackWellcome (senderId, body){
     
@@ -280,7 +292,7 @@ function sendPostBackWellcome (senderId, body){
   var name = bodyObj.first_name;
   var greeting = "Xin chào bạn " + name + ". ";
         
-  var messageHello = greeting + "Mình là chat bot. Rất hân hạnh được hỗ trợ bạn. Bạn có cần hỗ trợ về thông tin gì không?";
+  var messageHello = greeting + " :) Mình là SupportBot. Rất hân hạnh được hỗ trợ bạn. Bạn có cần hỗ trợ về thông tin gì không?";
   var  messageData = {
          "attachment":{
           "type":"image",
@@ -290,34 +302,90 @@ function sendPostBackWellcome (senderId, body){
         }
       }
   
-    // send message 
+    // send image hello 
     sendMessageToFBMessenger(senderId, messageData);
+  	// send welcome text 
+  	//sendMessageToFBMessenger(senderId,{text:messageHello});
+  	//send button 
+  	var messageButton  = {
+  			"attachment":{
+  	          "type":"template",
+  	          "payload":{
+  	            "template_type":"button",
+  	            "text":messageHello,
+  	            "buttons":[{
+  	            			"type":"postback",
+  	            			"title":"Có",
+  	            			"payload":"yes_support_welcome"
+  	            		},
+  	            		{
+  	            			"type":"postback",
+  	            			"title":"Không",
+  	            			"payload":"no_support_welcome"
+  	            		}
+  	            	]
+  	            }
+  	        }
+
+  	};
+  	
+  	sendMessageToFBMessenger(senderId, messageButton);
+  	
+  	
   } catch (err)  {
       console.log('error sendPostBackWellcome: ',err);
   }
   
 }
 
-　
-　
 // function process PageLoad 
+function processPayload (senderId,payload){
 
-　
-function processPageload (senderId,pageload){
+    try 
+    {
+    	switch (payload) {
+        case "yes_support_welcome":
 
-    switch (pageload) {
-    case "Correct":
-        sendMessageToFBMessenger(senderId, {text: "Awesome! What would you like to find out? Enter 'plot', 'date', 'runtime', 'director', 'cast' or 'rating' for the various details."});
-        break;
-    case "Chatbots are fun! One day your BFF might be a Chatbot":
-        sendMessageToFBMessenger(senderId, {text: "Chatbots are fun! One day your BFF might be a Chatbot."});
-        break;
-    case "Machine Learning":
-        sendMessageToFBMessenger(senderId, {text: "Use python to teach your maching in 16D space in 15min."});
-        break;
-    default:
-        // To do
-        sendMessageToFBMessenger(senderId, {text: "Sorry, I don't understand your request."});
-        break;
+        	//show log
+        	console.log("start processPayload action:", "yes_support_welcome" );
+        	var messageText = "SupportBot có thể giúp bạn các vấn đề nào sao đây?"
+        	var messageData= {
+        		"attachment":{
+        			"type":"template",
+        			"payload":{
+        				"template_type":"button",
+        				"text":messageText,
+        				"buttons":[
+        				        {
+									"type":"postback",
+									"title":"Hợp đồng và phí",
+									"payload":"op_policy"
+								},
+								{
+									"type":"postback",
+									"title":"Mua thêm hợp đồng",
+									"payload":"by_op"
+								}
+        				]
+        			}
+        		}	
+        	};
+        	
+        	sendMessageToFBMessenger(senderId, messageData);
+            break;
+        case "no_support_welcome":
+        	//show log
+        	console.log("start processPayload action:", "no_support_welcome" );
+        	
+            break;
+        default:
+            // To do
+            sendMessageToFBMessenger(senderId, {text: "Sorry, I don't understand your request."});
+            break;
+        }
+    } catch (err){
+    	//show error
+    	console.log("error processPayload", erro);
     }
+	
 }
