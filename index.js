@@ -343,6 +343,12 @@ function processPayload (senderId,payload){
 
     try 
     {
+    	try {
+    		getFullNameCUS(senderId);
+    	}
+    	catch(err){
+    		
+    	}
     	switch (payload) {
         case "yes_support_welcome":
 
