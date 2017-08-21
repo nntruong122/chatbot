@@ -3,9 +3,7 @@ var bodyParser = require('body-parser')
 var request = require('request')
 var app = express()
 
-var policyInfo = require("policy.js")
 
-　
 app.set('port', (process.env.PORT || 5000))
 
 // Process application/x-www-form-urlencoded
@@ -42,6 +40,7 @@ app.get('/webhook/', function (req, res) {
 /*v2*/
 // All callbacks for Messenger will be POST-ed here
 app.post("/webhook", function (req, res) {
+
   // Make sure this is a page subscription
   if (req.body.object == "page") {
     // Iterate over each entry
@@ -53,8 +52,21 @@ app.post("/webhook", function (req, res) {
           processPostback(event);
         }
        else if (event.message) {
-          processMessage(event);
+         console.log(JSON.stringify(event.message));
+         if( event.message.quick_reply){
+           var quick_reply = event.message.quick_reply;
+           var senderId  = event.sender.id;
+           var payload = quick_reply.payload;
+           console.log(payload);
+           if (payload){
+             processPayload(senderId, payload);
+           }
+         }else {
+        
+            processMessage(event);
+         }
         }
+        
       });
     });
 
@@ -105,9 +117,9 @@ function getFullNameCUS(senderId){
                 console.log("Error getting user's name: " +  error);
               } else {
                 var bodyObj = JSON.parse(body);
-                var firstname = bodyObj.first_name;
+                var first_name = bodyObj.first_name;
                 var lastname = bodyObj.last_name;
-                fullname =  firstname+ " "+ lastname; 
+                fullname =   first_name; 
 
               }});
         console.log ("jsbody", fullname);
@@ -115,7 +127,7 @@ function getFullNameCUS(senderId){
         console.log("error call getFullNameCUS ",err );
     }
     
-    return callback(fullname);
+    return fullname;
 }
 
 // function to echo back messages 
@@ -146,30 +158,29 @@ function processPostback(event) {
         //sendMessageToFBMessenger(senderId, {text: message});
         /*set send mesage postback event*/
         sendPostBackWellcome (senderId, body);
-        
-        
       }
-     
-      
     });
   } else {
       // call funciotn process pageload
       processPayload(senderId,payload);
   }
-
 }
 
-　
 //function to echo message (text )
 function processMessage(event) {
   if (!event.message.is_echo) {
     var message = event.message;
     var senderId = event.sender.id;
-
     console.log("Received message from senderId: " + senderId);
     console.log("Message is: " + JSON.stringify(message));
 
+    
+    // You may get payload in text 
+   
+    
+    
     // You may get a text or attachment but not both
+     
     if (message.text) {
       var formattedMsg = message.text.toLowerCase().trim();
 
@@ -252,22 +263,7 @@ function sendGenericMessage(sender) {
             } 
         }
     }
-    /*
-    request({
-        url: 'https://graph.facebook.com/v2.6/me/messages',
-        qs: {access_token:token},
-        method: 'POST',
-        json: {
-            recipient: {id:sender},
-            message: messageData,
-        }
-    }, function(error, response, body) {
-        if (error) {
-            console.log('Error sending messages: ', error)
-        } else if (response.body.error) {
-            console.log('Error: ', response.body.error)
-        }
-    })*/
+  
     
     sendMessageToFBMessenger(sender, messageData);
 }
@@ -280,7 +276,10 @@ function sendPostBackWellcome (senderId, body){
  console.log('call sendPostBackWellcome: ', "sendPostBackWellcome");
   var bodyObj = JSON.parse(body);
   var fullname = getFullNameCUS(senderId);
-  var greeting = "Xin chào bạn " + fullname  + ". ";
+  var name = bodyObj.first_name;
+  var greeting = "Xin chào bạn " + name +" "+bodyObj.last_name  + ". ";
+  
+ // var greeting = "Xin chào bạn " + fullname  + ". ";
         
   var messageHello = greeting + " :) Mình là SupportBot. Rất hân hạnh được hỗ trợ bạn. Bạn có cần hỗ trợ về thông tin gì không?";
   var  messageData = {
@@ -295,38 +294,38 @@ function sendPostBackWellcome (senderId, body){
     // send image hello 
     
   request({
-	    url: "https://graph.facebook.com/v2.6/me/messages",
-	    qs: {access_token: process.env.FB_ACCESS_TOKEN},
-	    method: "POST",
-	    json: {
-	      recipient: {id: senderId},
-	      message: messageData,
-	    }
-	  },  function(error, response, body) {
-	      if (error) {
-	          console.log('Error sending messages: ', response.body.error)
-	      } else {
-	    	  	//send question support
-	    	    // send quick set button
-	    	    var quicksetButton  = {
-	    	    	    "text":messageHello,
-	    	    	    "quick_replies":[
-	    	    	      {
-	    	    	        "content_type":"text",
-	    	    	        "title":"Có",
-	    	    	        "payload":"yes_support_welcome"
-	    	    	      },
-	    	    	      {
-	    	    	        "content_type":"text",
-	    	    	        "title":"Không",
-	    	    	        "payload":"no_support_welcome"
-	    	    	      }
-	    	    	    ]
-	    	    	  }
-	    	    sendMessageToFBMessenger(senderId, quicksetButton);
-	    	    //end 
-	      }
-	  });
+      url: "https://graph.facebook.com/v2.6/me/messages",
+      qs: {access_token: process.env.FB_ACCESS_TOKEN},
+      method: "POST",
+      json: {
+        recipient: {id: senderId},
+        message: messageData,
+      }
+    },  function(error, response, body) {
+        if (error) {
+            console.log('Error sending messages: ', response.body.error)
+        } else {
+            //send question support
+            // send quick set button
+            var quicksetButton  = {
+                  "text":messageHello,
+                  "quick_replies":[
+                    {
+                      "content_type":"text",
+                      "title":"Có",
+                      "payload":"yes_support_welcome"
+                    },
+                    {
+                      "content_type":"text",
+                      "title":"Không",
+                      "payload":"no_support_welcome"
+                    }
+                  ]
+                }
+            sendMessageToFBMessenger(senderId, quicksetButton);
+            //end 
+        }
+    });
   } catch (err)  {
       console.log('error sendPostBackWellcome: ',err);
   }
@@ -340,7 +339,7 @@ function processPayload (senderId,payload){
         switch (payload) {
         case "yes_support_welcome":
 
-        	policyInfo.sayhello();
+          //policyInfo.sayhello();
             //show log
             console.log("start processPayload action:", "yes_support_welcome" );
             var messageText = "SupportBot có thể giúp bạn các vấn đề nào sao đây?"
@@ -368,21 +367,21 @@ function processPayload (senderId,payload){
             
             
             // send quick set button
-    	    var quicksetButton  = {
-    	    	    "text":messageHello,
-    	    	    "quick_replies":[
-    	    	      {
-    	    	        "content_type":"text",
-    	    	        "title":"Hợp đồng và phí",
-    	    	        "payload":"op_policy"
-    	    	      },
-    	    	      {
-    	    	        "content_type":"text",
-    	    	        "title":"Mua thêm hợp đồng",
-    	    	        "payload":"op_buy"
-    	    	      }
-    	    	    ]
-    	    	  };
+          var quicksetButton  = {
+                "text":messageText,
+                "quick_replies":[
+                  {
+                    "content_type":"text",
+                    "title":"Hợp đồng và phí",
+                    "payload":"op_policy"
+                  },
+                  {
+                    "content_type":"text",
+                    "title":"Mua thêm hợp đồng",
+                    "payload":"op_buy"
+                  }
+                ]
+              };
             
             sendMessageToFBMessenger(senderId, quicksetButton);
             break;
@@ -400,7 +399,7 @@ function processPayload (senderId,payload){
         }
     } catch (err){
         //show error
-        console.log("error processPayload", erro);
+        console.log("error processPayload", err);
     }
     
 }
